@@ -9,7 +9,8 @@ import {
   Clock,
   Users,
   Play,
-  BookOpen
+  BookOpen,
+  History
 } from 'lucide-react';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { useAuth } from '../hooks/useAuth';
