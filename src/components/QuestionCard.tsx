@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mic, MicOff, Play, Pause, ArrowRight, MessageSquare } from 'lucide-react';
 import AudioRecorder from './AudioRecorder';
 import FeedbackDisplay from './FeedbackDisplay';
+import TavusVideoPlayer from './TavusVideoPlayer';
 
 interface QuestionCardProps {
   question: string;
@@ -25,6 +26,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   const [feedback, setFeedback] = useState('');
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   const generateFeedback = (userAnswer: string) => {
     // Mock AI feedback generation
@@ -75,85 +77,97 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
     setFeedback('');
     setScore(0);
     setAudioBlob(null);
+    setVideoReady(false);
     onNext();
   };
 
   return (
-    <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
-      {/* Question */}
-      <div className="mb-8">
+    <div className="space-y-6">
+      {/* AI Video Interviewer */}
+      <div className="bg-gray-800 rounded-xl p-6 shadow-2xl border border-gray-700">
         <div className="flex items-center mb-4">
           <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
             {questionNumber}
           </div>
-          <h3 className="ml-3 text-xl font-semibold text-white">Question</h3>
-        </div>
-        <p className="text-gray-300 text-lg leading-relaxed bg-gray-700/50 p-4 rounded-lg">
-          {question}
-        </p>
-      </div>
-
-      {/* Answer Input */}
-      <div className="mb-8">
-        <div className="flex items-center mb-4">
-          <MessageSquare className="h-5 w-5 text-blue-400 mr-2" />
-          <h4 className="text-lg font-medium text-white">Your Answer</h4>
+          <h3 className="ml-3 text-xl font-semibold text-white">AI Interviewer</h3>
         </div>
         
-        <textarea
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          placeholder="Type your answer here or use the voice recorder below..."
-          className="w-full h-32 p-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none"
-          disabled={showFeedback}
+        <TavusVideoPlayer
+          question={question}
+          onVideoReady={() => setVideoReady(true)}
+          onVideoEnd={() => {
+            // Auto-focus on answer input when video ends
+            const textarea = document.querySelector('textarea');
+            textarea?.focus();
+          }}
+          className="mb-4"
         />
-
-        {/* Audio Recorder */}
-        <div className="mt-4">
-          <AudioRecorder
-            onRecordingComplete={(blob, transcript) => {
-              setAudioBlob(blob);
-              if (transcript) {
-                setAnswer(prev => prev + (prev ? ' ' : '') + transcript);
-              }
-            }}
-            disabled={showFeedback}
-          />
-        </div>
       </div>
 
-      {/* Feedback Display */}
-      {showFeedback && (
-        <FeedbackDisplay
-          feedback={feedback}
-          score={score}
-          onNext={handleNext}
-          isLast={isLast}
-        />
-      )}
+      {/* Answer Section */}
+      <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
+        {/* Answer Input */}
+        <div className="mb-8">
+          <div className="flex items-center mb-4">
+            <MessageSquare className="h-5 w-5 text-blue-400 mr-2" />
+            <h4 className="text-lg font-medium text-white">Your Answer</h4>
+          </div>
+          
+          <textarea
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="Type your answer here or use the voice recorder below..."
+            className="w-full h-32 p-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none"
+            disabled={showFeedback}
+          />
 
-      {/* Submit Button */}
-      {!showFeedback && (
-        <div className="flex justify-end">
-          <button
-            onClick={handleSubmitAnswer}
-            disabled={!answer.trim() || loading}
-            className="inline-flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <ArrowRight className="h-5 w-5 mr-2" />
-                Submit Answer
-              </>
-            )}
-          </button>
+          {/* Audio Recorder */}
+          <div className="mt-4">
+            <AudioRecorder
+              onRecordingComplete={(blob, transcript) => {
+                setAudioBlob(blob);
+                if (transcript) {
+                  setAnswer(prev => prev + (prev ? ' ' : '') + transcript);
+                }
+              }}
+              disabled={showFeedback}
+            />
+          </div>
         </div>
-      )}
+
+        {/* Feedback Display */}
+        {showFeedback && (
+          <FeedbackDisplay
+            feedback={feedback}
+            score={score}
+            onNext={handleNext}
+            isLast={isLast}
+          />
+        )}
+
+        {/* Submit Button */}
+        {!showFeedback && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleSubmitAnswer}
+              disabled={!answer.trim() || loading}
+              className="inline-flex items-center bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="h-5 w-5 mr-2" />
+                  Submit Answer
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
