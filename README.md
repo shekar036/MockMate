@@ -312,8 +312,3 @@ If you encounter any issues or have questions:
 - **Mobile App**: Native iOS and Android applications
 - **Integration**: Connect with job boards and ATS systems
 
----
-
-**Built with ❤️ by the MockMate Team**
-
-*Empowering job seekers with AI-powered interview preparation*
