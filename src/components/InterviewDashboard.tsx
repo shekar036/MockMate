@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/Tabs';
 import InterviewSession from './InterviewSession';
 import InterviewHistory from './InterviewHistory';
+import DashboardStats from './DashboardStats';
 import { useAuth } from '../hooks/useAuth';
-import { LogOut, Mic, History } from 'lucide-react';
+import { LogOut, Mic, History, BarChart3 } from 'lucide-react';
 
 const InterviewDashboard: React.FC = () => {
   const { user, signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState('interview');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const handleSignOut = async () => {
     try {
@@ -46,6 +47,10 @@ const InterviewDashboard: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-8">
+            <TabsTrigger value="dashboard" className="flex items-center">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Dashboard
+            </TabsTrigger>
             <TabsTrigger value="interview" className="flex items-center">
               <Mic className="h-4 w-4 mr-2" />
               Interview
@@ -55,6 +60,10 @@ const InterviewDashboard: React.FC = () => {
               History
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard">
+            <DashboardStats />
+          </TabsContent>
 
           <TabsContent value="interview">
             <InterviewSession />
