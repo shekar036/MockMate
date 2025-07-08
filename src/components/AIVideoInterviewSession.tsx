@@ -84,7 +84,6 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
 
       const conversationData = {
         replica_id: replicaId,
-        persona_id: replicaId,
         callback_url: `${window.location.origin}/api/tavus-callback`,
         properties: {
           max_call_duration: 1200, // 20 minutes
