@@ -22,6 +22,7 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [videoId, setVideoId] = useState<string>('');
+  const [generationStatus, setGenerationStatus] = useState<string>('');
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
@@ -42,18 +43,19 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
     setIsLoading(true);
     setError('');
     setVideoUrl('');
+    setGenerationStatus('Initializing...');
     
     try {
-      const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY || import.meta.env.TAVUS_API_KEY;
+      // Get API credentials from environment variables
+      const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
+      const replicaId = import.meta.env.VITE_TAVUS_REPLICA_ID;
       
-      if (!tavusApiKey) {
-        // Fallback to demo video if no API key
-        console.warn('No Tavus API key found, using demo video');
-        setVideoUrl('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
-        setIsLoading(false);
-        onVideoReady?.();
-        return;
+      if (!tavusApiKey || !replicaId) {
+        throw new Error('Tavus API key or Replica ID not configured');
       }
+
+      console.log('Generating Tavus video with:', { replicaId, questionLength: questionText.length });
+      setGenerationStatus('Creating video...');
 
       // Create video generation request
       const response = await fetch('https://tavusapi.com/v2/videos', {
@@ -63,9 +65,9 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
           'x-api-key': tavusApiKey,
         },
         body: JSON.stringify({
-          replica_id: import.meta.env.VITE_TAVUS_REPLICA_ID || 'r769c1c0b8',
+          replica_id: replicaId,
           script: questionText,
-          video_name: `Interview Question - ${Date.now()}`,
+          video_name: `MockMate Interview Question - ${Date.now()}`,
           properties: {
             voice_settings: {
               stability: 0.8,
@@ -82,33 +84,35 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error(`Tavus API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.text();
+        console.error('Tavus API error:', response.status, errorData);
+        throw new Error(`Tavus API error: ${response.status} - ${errorData}`);
       }
 
       const data = await response.json();
+      console.log('Video generation started:', data);
       setVideoId(data.video_id);
+      setGenerationStatus('Processing video...');
       
       // Poll for video completion
       pollVideoStatus(data.video_id, tavusApiKey);
       
     } catch (error) {
       console.error('Error generating Tavus video:', error);
-      setError('Failed to generate video. Using fallback.');
-      
-      // Fallback to a demo video
-      setVideoUrl('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+      setError(`Failed to generate video: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsLoading(false);
-      onVideoReady?.();
+      setGenerationStatus('');
     }
   };
 
   const pollVideoStatus = async (videoId: string, apiKey: string) => {
-    const maxAttempts = 30; // 5 minutes max wait time
+    const maxAttempts = 60; // 10 minutes max wait time
     let attempts = 0;
     
     const poll = async () => {
       try {
         attempts++;
+        setGenerationStatus(`Processing... (${attempts}/${maxAttempts})`);
         
         const response = await fetch(`https://tavusapi.com/v2/videos/${videoId}`, {
           headers: {
@@ -121,10 +125,13 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
         }
 
         const data = await response.json();
+        console.log('Video status:', data);
         
         if (data.status === 'completed' && data.download_url) {
+          console.log('Video generation completed:', data.download_url);
           setVideoUrl(data.download_url);
           setIsLoading(false);
+          setGenerationStatus('');
           onVideoReady?.();
           return;
         }
@@ -133,18 +140,19 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
           throw new Error('Video generation failed');
         }
         
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 10000); // Poll every 10 seconds
-        } else {
-          throw new Error('Video generation timeout');
+        if (data.status === 'processing' || data.status === 'queued') {
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 10000); // Poll every 10 seconds
+          } else {
+            throw new Error('Video generation timeout - please try again');
+          }
         }
         
       } catch (error) {
         console.error('Error polling video status:', error);
-        setError('Video generation failed. Using fallback.');
-        setVideoUrl('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+        setError(`Video generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsLoading(false);
-        onVideoReady?.();
+        setGenerationStatus('');
       }
     };
     
@@ -223,10 +231,13 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
       <div className={`bg-gray-800 rounded-lg p-8 border border-gray-700 ${className}`}>
         <div className="flex flex-col items-center justify-center h-64">
           <Loader className="h-12 w-12 text-blue-400 animate-spin mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">Generating AI Video</h3>
-          <p className="text-gray-400 text-center">
-            Creating a personalized video for your interview question...
+          <h3 className="text-lg font-semibold text-white mb-2">Generating AI Interviewer Video</h3>
+          <p className="text-gray-400 text-center mb-4">
+            Your AI interviewer is preparing to ask the question...
           </p>
+          {generationStatus && (
+            <p className="text-blue-400 text-sm">{generationStatus}</p>
+          )}
           <div className="mt-4 w-full max-w-xs bg-gray-700 rounded-full h-2">
             <div className="bg-blue-500 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
           </div>
@@ -235,7 +246,7 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
     );
   }
 
-  if (error && !videoUrl) {
+  if (error) {
     return (
       <div className={`bg-gray-800 rounded-lg p-8 border border-red-500/30 ${className}`}>
         <div className="flex flex-col items-center justify-center h-64">
@@ -247,7 +258,7 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
             className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
           >
             <RotateCcw className="h-4 w-4 mr-2" />
-            Retry
+            Retry Generation
           </button>
         </div>
       </div>
@@ -260,15 +271,13 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+            <div className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse"></div>
             <h3 className="text-white font-medium">AI Interviewer</h3>
           </div>
-          {error && (
-            <div className="flex items-center text-yellow-400 text-sm">
-              <AlertCircle className="h-4 w-4 mr-1" />
-              Using demo video
-            </div>
-          )}
+          <div className="flex items-center text-green-400 text-sm">
+            <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+            Live Interview
+          </div>
         </div>
       </div>
 
@@ -283,6 +292,7 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           playsInline
+          autoPlay
         />
         
         {/* Video Overlay Controls */}
