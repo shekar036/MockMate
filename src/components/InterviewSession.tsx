@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Play, ChevronDown, ArrowRight, RefreshCw, RotateCcw } from 'lucide-react';
+import { Play, ChevronDown, ArrowRight, RefreshCw, RotateCcw, MessageSquare, Video, Clock, Zap } from 'lucide-react';
 import RoleSelector from './RoleSelector';
-import QuestionCard from './QuestionCard';
+import QuickPracticeSession from './QuickPracticeSession';
+import AIVideoInterviewSession from './AIVideoInterviewSession';
 import ProgressBar from './ProgressBar';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { useAuth } from '../hooks/useAuth';
@@ -50,6 +51,7 @@ const InterviewSession: React.FC = () => {
   const { supabase } = useSupabase();
   const { user } = useAuth();
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [sessionMode, setSessionMode] = useState<'quick' | 'video' | ''>('');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [questions, setQuestions] = useState<string[]>([]);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
@@ -141,7 +143,7 @@ const InterviewSession: React.FC = () => {
   };
 
   const startNewInterview = () => {
-    if (!selectedRole) return;
+    if (!selectedRole || !sessionMode) return;
     
     const roleQuestions = INTERVIEW_QUESTIONS[selectedRole as keyof typeof INTERVIEW_QUESTIONS];
     setQuestions(roleQuestions);
@@ -162,6 +164,7 @@ const InterviewSession: React.FC = () => {
 
   const resetInterview = () => {
     setSelectedRole('');
+    setSessionMode('');
     setCurrentQuestion(0);
     setQuestions([]);
     setIsInterviewActive(false);
@@ -287,30 +290,154 @@ const InterviewSession: React.FC = () => {
   if (!isInterviewActive) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
+        <div className="space-y-8">
+          {/* Header */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-white mb-4">
-              Welcome to MockMate!
+              Choose Your Interview Experience
             </h2>
             <p className="text-gray-300 text-lg">
-              What role are you preparing for today?
+              Select your preferred interview mode and role
             </p>
           </div>
 
-          <RoleSelector
-            selectedRole={selectedRole}
-            onRoleChange={setSelectedRole}
-          />
+          {/* Session Mode Selection */}
+          {!sessionMode && (
+            <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
+              <h3 className="text-2xl font-bold text-white mb-6 text-center">
+                Choose Interview Mode
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Quick Practice Mode */}
+                <button
+                  onClick={() => setSessionMode('quick')}
+                  className="p-6 rounded-xl border-2 border-gray-600 bg-gray-700/50 hover:border-blue-500 hover:bg-blue-600/10 transition-all duration-200 text-left group hover:scale-105"
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-blue-600 p-3 rounded-lg group-hover:bg-blue-500 transition-colors">
+                      <Zap className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-xl font-semibold text-white mb-2">
+                        Quick Practice
+                      </h4>
+                      <p className="text-gray-400 text-sm mb-4">
+                        Fast-paced practice with text or voice responses. Perfect for quick skill assessment and practice.
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-green-400 text-sm">
+                          <Clock className="h-4 w-4 mr-2" />
+                          5-10 minutes
+                        </div>
+                        <div className="flex items-center text-blue-400 text-sm">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Text & Voice Input
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
 
-          {selectedRole && (
-            <div className="mt-8 text-center">
-              <button
-                onClick={startNewInterview}
-                className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 transform hover:scale-105"
-              >
-                <Play className="h-5 w-5 mr-2" />
-                Start Interview
-              </button>
+                {/* AI Video Interview Mode */}
+                <button
+                  onClick={() => setSessionMode('video')}
+                  className="p-6 rounded-xl border-2 border-gray-600 bg-gray-700/50 hover:border-purple-500 hover:bg-purple-600/10 transition-all duration-200 text-left group hover:scale-105"
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-purple-600 p-3 rounded-lg group-hover:bg-purple-500 transition-colors">
+                      <Video className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-xl font-semibold text-white mb-2">
+                        AI Video Interview
+                      </h4>
+                      <p className="text-gray-400 text-sm mb-4">
+                        Real-time video conversation with AI interviewer. Most realistic interview experience.
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-green-400 text-sm">
+                          <Clock className="h-4 w-4 mr-2" />
+                          15-20 minutes
+                        </div>
+                        <div className="flex items-center text-purple-400 text-sm">
+                          <Video className="h-4 w-4 mr-2" />
+                          Real-time Video Chat
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Role Selection */}
+          {sessionMode && !selectedRole && (
+            <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-white">
+                  Select Your Role
+                </h3>
+                <button
+                  onClick={() => setSessionMode('')}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  ← Back to Mode Selection
+                </button>
+              </div>
+              
+              <RoleSelector
+                selectedRole={selectedRole}
+                onRoleChange={setSelectedRole}
+              />
+            </div>
+          )}
+
+          {/* Start Interview Button */}
+          {sessionMode && selectedRole && (
+            <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
+              <div className="text-center">
+                <div className="mb-6">
+                  <div className="inline-flex items-center bg-gray-700 rounded-lg p-4 mb-4">
+                    {sessionMode === 'quick' ? (
+                      <Zap className="h-6 w-6 text-blue-400 mr-3" />
+                    ) : (
+                      <Video className="h-6 w-6 text-purple-400 mr-3" />
+                    )}
+                    <div className="text-left">
+                      <div className="text-white font-medium">
+                        {sessionMode === 'quick' ? 'Quick Practice' : 'AI Video Interview'}
+                      </div>
+                      <div className="text-gray-400 text-sm">{selectedRole}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={startNewInterview}
+                  className={`inline-flex items-center font-medium py-3 px-6 rounded-lg transition-colors duration-200 transform hover:scale-105 ${
+                    sessionMode === 'quick' 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  }`}
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  Start {sessionMode === 'quick' ? 'Quick Practice' : 'AI Video Interview'}
+                </button>
+                
+                <div className="mt-4">
+                  <button
+                    onClick={() => {
+                      setSelectedRole('');
+                      setSessionMode('');
+                    }}
+                    className="text-gray-400 hover:text-white transition-colors text-sm"
+                  >
+                    ← Change selection
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -346,9 +473,12 @@ const InterviewSession: React.FC = () => {
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-white">
-            {selectedRole} Interview
-          </h2>
+          <div>
+            <h2 className="text-2xl font-bold text-white">
+              {sessionMode === 'quick' ? 'Quick Practice' : 'AI Video Interview'}
+            </h2>
+            <p className="text-gray-400">{selectedRole}</p>
+          </div>
           <div className="text-gray-400">
             Question {currentQuestion + 1} of {questions.length}
           </div>
@@ -359,13 +489,24 @@ const InterviewSession: React.FC = () => {
         />
       </div>
 
-      <QuestionCard
-        question={questions[currentQuestion]}
-        questionNumber={currentQuestion + 1}
-        onAnswerSubmit={saveAnswer}
-        onNext={nextQuestion}
-        isLast={currentQuestion === questions.length - 1}
-      />
+      {sessionMode === 'quick' ? (
+        <QuickPracticeSession
+          question={questions[currentQuestion]}
+          questionNumber={currentQuestion + 1}
+          onAnswerSubmit={saveAnswer}
+          onNext={nextQuestion}
+          isLast={currentQuestion === questions.length - 1}
+        />
+      ) : (
+        <AIVideoInterviewSession
+          question={questions[currentQuestion]}
+          questionNumber={currentQuestion + 1}
+          role={selectedRole}
+          onAnswerSubmit={saveAnswer}
+          onNext={nextQuestion}
+          isLast={currentQuestion === questions.length - 1}
+        />
+      )}
     </div>
   );
 };
