@@ -68,17 +68,15 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
           replica_id: replicaId,
           script: questionText,
           video_name: `MockMate Interview Question - ${Date.now()}`,
-          properties: {
-            voice_settings: {
-              stability: 0.8,
-              similarity_boost: 0.8,
-              style: 0.2,
-              use_speaker_boost: true
-            },
-            video_settings: {
-              quality: 'high',
-              aspect_ratio: '16:9'
-            }
+          voice_settings: {
+            stability: 0.8,
+            similarity_boost: 0.8,
+            style: 0.2,
+            use_speaker_boost: true
+          },
+          video_settings: {
+            quality: 'high',
+            aspect_ratio: '16:9'
           }
         }),
       });
