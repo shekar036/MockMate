@@ -77,23 +77,41 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
   const createTavusConversation = async () => {
     try {
       const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
-      const replicaId = import.meta.env.VITE_TAVUS_REPLICA_ID;
+      const personaId = import.meta.env.VITE_TAVUS_PERSONA_ID; // Changed from replica_id to persona_id
       
-      if (!tavusApiKey || !replicaId) {
-        throw new Error('Tavus API key or Replica ID not configured');
+      if (!tavusApiKey || !personaId) {
+        throw new Error('Tavus API key or Persona ID not configured');
       }
 
       const conversationData = {
-        replica_id: replicaId,
-        callback_url: `${window.location.origin}/api/tavus-callback`,
+        persona_id: personaId,
+        conversation_name: `MockMate ${role} Interview - Session ${Date.now()}`,
+        conversational_context: `You are an experienced ${role} interviewer conducting a professional job interview. Your role is to:
+
+1. Ask the following interview question in a natural, conversational way: "${question}"
+
+2. Listen carefully to the candidate's response and provide follow-up questions if needed to get more detailed answers
+
+3. After the candidate has fully answered the question, provide constructive feedback on their response including:
+   - What they did well
+   - Areas for improvement
+   - Specific suggestions for strengthening their answer
+   - A score from 1-10 based on the quality and completeness of their response
+
+4. Maintain a professional but friendly tone throughout the interview
+
+5. Keep the conversation focused on the specific question and the candidate's technical/professional experience related to ${role}
+
+6. End the conversation naturally after providing feedback and scoring
+
+Remember: This is a mock interview for practice, so be encouraging while still providing honest, constructive feedback.`,
         properties: {
           max_call_duration: 1200, // 20 minutes
           participant_left_timeout: 60,
           participant_absent_timeout: 30,
-          enable_recording: false
-        },
-        conversation_name: `MockMate ${role} Interview - Question ${questionNumber}`,
-        custom_greeting: `Hello! I'm your AI interviewer for the ${role} position. I'll be asking you about: ${question}. Please take your time to think and provide a detailed response. Are you ready to begin?`
+          enable_recording: false,
+          language: "en"
+        }
       };
 
       const response = await fetch('https://tavusapi.com/v2/conversations', {
