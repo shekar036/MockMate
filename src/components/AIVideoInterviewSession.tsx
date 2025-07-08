@@ -36,12 +36,13 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const conversationIdRef = useRef<string>('');
 
   useEffect(() => {
     initializeVideoInterview();
     
     return () => {
-      cleanup();
+      cleanupWithConversationEnd();
     };
   }, []);
 
@@ -112,6 +113,7 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
       const data = await response.json();
       console.log('Conversation created:', data);
       
+      conversationIdRef.current = data.conversation_id;
       setConversation(prev => ({
         ...prev,
         conversationId: data.conversation_id,
@@ -125,10 +127,20 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
       
     } catch (error) {
       console.error('Error creating Tavus conversation:', error);
+      
+      let errorMessage = 'Failed to initialize video interview. Please check camera/microphone permissions.';
+      
+      // Handle specific API errors
+      if (error instanceof Error && error.message.includes('User has reached maximum concurrent conversations')) {
+        errorMessage = 'You have too many active video interviews. Please wait a moment and try again, or refresh the page to clear any stuck sessions.';
+      } else if (error instanceof Error && error.message.includes('Tavus API error')) {
+        errorMessage = `Video interview service error. Please try again in a moment.`;
+      }
+      
       setConversation(prev => ({ 
         ...prev, 
         status: 'error', 
-        error: `Failed to create video interview: ${error instanceof Error ? error.message : 'Unknown error'}` 
+        error: errorMessage
       }));
     }
   };
@@ -202,23 +214,34 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
   };
 
   const endInterview = async () => {
-    if (conversation.conversationId) {
+    await endTavusConversation();
+    handleConversationEnd({});
+  };
+
+  const endTavusConversation = async () => {
+    const conversationId = conversationIdRef.current || conversation.conversationId;
+    if (conversationId) {
       try {
         const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
         
-        await fetch(`https://tavusapi.com/v2/conversations/${conversation.conversationId}/end`, {
+        await fetch(`https://tavusapi.com/v2/conversations/${conversationId}/end`, {
           method: 'POST',
           headers: {
             'x-api-key': tavusApiKey,
           },
         });
         
+        conversationIdRef.current = '';
+        
       } catch (error) {
         console.error('Error ending conversation:', error);
       }
     }
-    
-    handleConversationEnd({});
+  };
+
+  const cleanupWithConversationEnd = async () => {
+    await endTavusConversation();
+    cleanup();
   };
 
   const cleanup = () => {
@@ -247,10 +270,10 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
           <p className="text-gray-400 text-center mb-4">{conversation.error}</p>
           <button
             onClick={initializeVideoInterview}
-            className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
           >
             <Video className="h-4 w-4 mr-2" />
-            Retry Video Interview
+            Try Again
           </button>
         </div>
       </div>
