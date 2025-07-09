@@ -169,7 +169,6 @@ Remember: This is a mock interview for practice, so be encouraging while still p
     const poll = async () => {
       try {
         attempts++;
-        setGenerationStatus(`Processing... (${attempts}/${maxAttempts})`);
         
         const response = await fetch(`${supabaseUrl}/functions/v1/get-tavus-conversation?conversation_id=${conversationId}`, {
           headers: {
