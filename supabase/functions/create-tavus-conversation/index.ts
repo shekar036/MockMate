@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
 
     const requestData: ConversationRequest = await req.json()
 
-    const response = await fetch('https://tavusapi.com/v2/conversationshttps://tavusapi.com/v2/conversations', {
+    const response = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
