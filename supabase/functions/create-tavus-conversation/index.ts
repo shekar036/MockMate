@@ -29,6 +29,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const requestData: ConversationRequest = await req.json()
+    
+    // Use your specific persona ID
+    const conversationPayload = {
+      ...requestData,
+      persona_id: 'pd47b095c82a'
+    }
 
     const response = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
@@ -36,11 +42,17 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
         'x-api-key': tavusApiKey,
       },
-      body: JSON.stringify(requestData),
+      body: JSON.stringify(conversationPayload),
     })
 
     if (!response.ok) {
       const errorData = await response.text()
+      
+      // Handle specific error cases
+      if (errorData.includes('maximum concurrent conversations')) {
+        throw new Error('maximum concurrent conversations')
+      }
+      
       throw new Error(`Tavus API error: ${response.status} - ${errorData}`)
     }
 
