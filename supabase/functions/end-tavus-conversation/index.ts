@@ -19,6 +19,21 @@ Deno.serve(async (req: Request) => {
       throw new Error('TAVUS_API_KEY not configured')
     }
 
+    // Check if request has content
+    const contentLength = req.headers.get('Content-Length')
+    if (contentLength === '0' || contentLength === null) {
+      return new Response(
+        JSON.stringify({ error: 'Request body is required' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      )
+    }
+
     const { conversation_id }: EndConversationRequest = await req.json()
 
     const response = await fetch(`https://tavusapi.com/v2/conversations/${conversation_id}/end`, {

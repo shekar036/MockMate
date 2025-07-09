@@ -186,7 +186,7 @@ Remember: This is a mock interview for practice, so be encouraging while still p
         }
         
         // Continue monitoring if conversation is still active
-        setTimeout(checkStatus, 5000);
+        setTimeout(poll, 5000);
         
       } catch (error) {
         console.error('Error monitoring conversation:', error);
@@ -194,7 +194,7 @@ Remember: This is a mock interview for practice, so be encouraging while still p
     };
     
     // Start monitoring after a delay
-    setTimeout(checkStatus, 10000);
+    setTimeout(poll, 10000);
   };
 
   const handleConversationEnd = async (conversationData: any) => {
