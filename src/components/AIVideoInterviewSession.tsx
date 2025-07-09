@@ -106,7 +106,7 @@ Remember: This is a mock interview for practice, so be encouraging while still p
           participant_left_timeout: 60,
           participant_absent_timeout: 30,
           enable_recording: false,
-          language: "en"
+          language: "English"
         }
       };
 
