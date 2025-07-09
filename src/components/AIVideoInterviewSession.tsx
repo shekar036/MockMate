@@ -77,7 +77,7 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
   const createTavusConversation = async () => {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const personaId = 'p3d4ffc5df47'; // Your persona ID
+      const personaId = 'pd47b095c82a'; // Your persona ID
 
       const conversationData = {
         persona_id: personaId,
@@ -145,8 +145,9 @@ Remember: This is a mock interview for practice, so be encouraging while still p
       let errorMessage = 'Failed to initialize video interview. Please check camera/microphone permissions.';
       
       // Handle specific API errors
-      if (error instanceof Error && error.message.includes('User has reached maximum concurrent conversations')) {
-        errorMessage = 'You have too many active video interviews. Please wait a moment and try again, or refresh the page to clear any stuck sessions.';
+      if (error instanceof Error && error.message.includes('maximum concurrent conversations')) {
+        alert('Max interviews reached. Please close an old session or wait before trying again.');
+        return;
       } else if (error instanceof Error && error.message.includes('Tavus API error')) {
         errorMessage = `Video interview service error. Please try again in a moment.`;
       }

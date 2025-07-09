@@ -47,7 +47,7 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
     
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const replicaId = 'rca8a38779a8'; // Your replica ID
+      const replicaId = 'rb17cf590e15'; // Your replica ID
 
       setGenerationStatus('Creating video...');
 
@@ -81,7 +81,16 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
       
     } catch (error) {
       console.error('Error generating Tavus video:', error);
-      setError(`Failed to generate video: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      let errorMessage = `Failed to generate video: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      
+      // Handle specific API errors
+      if (error instanceof Error && error.message.includes('maximum concurrent conversations')) {
+        alert('Max interviews reached. Please close an old session or wait before trying again.');
+        return;
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
       setGenerationStatus('');
     }

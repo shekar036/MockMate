@@ -145,13 +145,21 @@ const InterviewSession: React.FC = () => {
   const startNewInterview = () => {
     if (!selectedRole || !sessionMode) return;
     
-    const roleQuestions = INTERVIEW_QUESTIONS[selectedRole as keyof typeof INTERVIEW_QUESTIONS];
-    setQuestions(roleQuestions);
-    setCurrentQuestion(0);
-    setIsInterviewActive(true);
-    setIsComplete(false);
-    setSessionId(Date.now().toString());
-    setShowResumeOptions(false);
+    try {
+      const roleQuestions = INTERVIEW_QUESTIONS[selectedRole as keyof typeof INTERVIEW_QUESTIONS];
+      setQuestions(roleQuestions);
+      setCurrentQuestion(0);
+      setIsInterviewActive(true);
+      setIsComplete(false);
+      setSessionId(Date.now().toString());
+      setShowResumeOptions(false);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('maximum concurrent conversations')) {
+        alert('Max interviews reached. Please close an old session or wait before trying again.');
+        return;
+      }
+      console.error('Error starting interview:', error);
+    }
   };
 
   const nextQuestion = () => {
