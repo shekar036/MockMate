@@ -76,12 +76,8 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
 
   const createTavusConversation = async () => {
     try {
-      const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
-      const personaId = import.meta.env.VITE_TAVUS_PERSONA_ID; // Changed from replica_id to persona_id
-      
-      if (!tavusApiKey || !personaId) {
-        throw new Error('Tavus API key or Persona ID not configured');
-      }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const personaId = 'p3d4ffc5df47'; // Your persona ID
 
       const conversationData = {
         persona_id: personaId,
@@ -114,11 +110,11 @@ Remember: This is a mock interview for practice, so be encouraging while still p
         }
       };
 
-      const response = await fetch('https://tavusapi.com/v2/conversations', {
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-tavus-conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': tavusApiKey,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify(conversationData),
       });
@@ -141,7 +137,7 @@ Remember: This is a mock interview for practice, so be encouraging while still p
       setIsVideoReady(true);
       
       // Start monitoring conversation status
-      monitorConversation(data.conversation_id, tavusApiKey);
+      monitorConversation(data.conversation_id);
       
     } catch (error) {
       console.error('Error creating Tavus conversation:', error);
@@ -163,12 +159,20 @@ Remember: This is a mock interview for practice, so be encouraging while still p
     }
   };
 
-  const monitorConversation = async (conversationId: string, apiKey: string) => {
-    const checkStatus = async () => {
+  const monitorConversation = async (conversationId: string) => {
+    const maxAttempts = 60; // 10 minutes max wait time
+    let attempts = 0;
+    
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    
+    const poll = async () => {
       try {
-        const response = await fetch(`https://tavusapi.com/v2/conversations/${conversationId}`, {
+        attempts++;
+        setGenerationStatus(`Processing... (${attempts}/${maxAttempts})`);
+        
+        const response = await fetch(`${supabaseUrl}/functions/v1/get-tavus-conversation?conversation_id=${conversationId}`, {
           headers: {
-            'x-api-key': apiKey,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
         });
 
@@ -240,13 +244,15 @@ Remember: This is a mock interview for practice, so be encouraging while still p
     const conversationId = conversationIdRef.current || conversation.conversationId;
     if (conversationId) {
       try {
-        const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         
-        await fetch(`https://tavusapi.com/v2/conversations/${conversationId}/end`, {
+        await fetch(`${supabaseUrl}/functions/v1/end-tavus-conversation`, {
           method: 'POST',
           headers: {
-            'x-api-key': tavusApiKey,
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
+          body: JSON.stringify({ conversation_id: conversationId }),
         });
         
         conversationIdRef.current = '';

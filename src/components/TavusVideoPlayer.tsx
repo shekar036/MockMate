@@ -46,23 +46,17 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
     setGenerationStatus('Initializing...');
     
     try {
-      // Get API credentials from environment variables
-      const tavusApiKey = import.meta.env.VITE_TAVUS_API_KEY;
-      const replicaId = import.meta.env.VITE_TAVUS_REPLICA_ID;
-      
-      if (!tavusApiKey || !replicaId) {
-        throw new Error('Tavus API key or Replica ID not configured');
-      }
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const replicaId = 'rca8a38779a8'; // Your replica ID
 
-      console.log('Generating Tavus video with:', { replicaId, questionLength: questionText.length });
       setGenerationStatus('Creating video...');
 
       // Create video generation request
-      const response = await fetch('https://tavusapi.com/v2/videos', {
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-tavus-video`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': tavusApiKey,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           replica_id: replicaId,
@@ -83,7 +77,7 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
       setGenerationStatus('Processing video...');
       
       // Poll for video completion
-      pollVideoStatus(data.video_id, tavusApiKey);
+      pollVideoStatus(data.video_id);
       
     } catch (error) {
       console.error('Error generating Tavus video:', error);
@@ -93,18 +87,20 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
     }
   };
 
-  const pollVideoStatus = async (videoId: string, apiKey: string) => {
+  const pollVideoStatus = async (videoId: string) => {
     const maxAttempts = 60; // 10 minutes max wait time
     let attempts = 0;
+    
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     
     const poll = async () => {
       try {
         attempts++;
         setGenerationStatus(`Processing... (${attempts}/${maxAttempts})`);
         
-        const response = await fetch(`https://tavusapi.com/v2/videos/${videoId}`, {
+        const response = await fetch(`${supabaseUrl}/functions/v1/get-tavus-video?video_id=${videoId}`, {
           headers: {
-            'x-api-key': apiKey,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
         });
 
