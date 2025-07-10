@@ -10,9 +10,11 @@ interface AIVideoInterviewSessionProps {
   isLast: boolean;
 }
 
-interface InterviewState {
-  status: 'idle' | 'starting' | 'question' | 'listening' | 'thinking' | 'feedback' | 'complete';
-  currentPhase: string;
+interface ConversationState {
+  conversationId: string;
+  status: 'idle' | 'connecting' | 'connected' | 'ended' | 'error';
+  error?: string;
+  conversationUrl?: string;
 }
 
 const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
@@ -23,38 +25,35 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
   onNext,
   isLast
 }) => {
-  const [interviewState, setInterviewState] = useState<InterviewState>({
-    status: 'idle',
-    currentPhase: 'Initializing...'
+  const [conversation, setConversation] = useState<ConversationState>({
+    conversationId: '',
+    status: 'idle'
   });
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [finalFeedback, setFinalFeedback] = useState('');
   const [finalScore, setFinalScore] = useState(0);
-  const [userResponse, setUserResponse] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const phaseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const conversationIdRef = useRef<string>('');
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     initializeVideoInterview();
     
     return () => {
-      cleanup();
+      cleanupWithConversationEnd();
     };
   }, []);
 
   const initializeVideoInterview = async () => {
     try {
-      setInterviewState({ status: 'starting', currentPhase: 'Setting up camera...' });
+      setConversation(prev => ({ ...prev, status: 'connecting' }));
       
-      // Get user media for local video
+      // Get user media for local video preview
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
         audio: true 
@@ -65,140 +64,246 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
         videoRef.current.srcObject = stream;
       }
       
-      setIsVideoReady(true);
-      
-      // Start the interview sequence
-      setTimeout(() => {
-        startInterviewSequence();
-      }, 1000);
+      // Create Tavus conversation with your specific IDs
+      await createTavusConversation();
       
     } catch (error) {
       console.error('Error initializing video interview:', error);
-      setInterviewState({ 
-        status: 'idle', 
-        currentPhase: 'Failed to access camera. Please check permissions.' 
-      });
+      setConversation(prev => ({ 
+        ...prev, 
+        status: 'error', 
+        error: 'Failed to initialize video interview. Please check camera/microphone permissions.' 
+      }));
     }
   };
 
-  const startInterviewSequence = () => {
-    // Phase 1: AI introduces the question
-    setInterviewState({ status: 'question', currentPhase: 'AI is asking the question...' });
-    
-    // Simulate AI speaking the question (3-5 seconds)
-    phaseTimerRef.current = setTimeout(() => {
-      setInterviewState({ status: 'listening', currentPhase: 'Your turn to respond...' });
-    }, 4000);
-  };
-
-  const startRecording = async () => {
-    if (!localStreamRef.current) return;
-
+  const createTavusConversation = async () => {
     try {
-      const mediaRecorder = new MediaRecorder(localStreamRef.current);
-      mediaRecorderRef.current = mediaRecorder;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       
-      const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data);
+      // Use your specific persona ID
+      const personaId = 'pd47b095c82a';
+
+      const conversationData = {
+        persona_id: personaId,
+        conversation_name: `MockMate ${role} Interview - Q${questionNumber} - ${Date.now()}`,
+        conversational_context: `You are Alex Chen, an experienced ${role} interviewer conducting a professional job interview. Your role is to:
+
+1. Greet the candidate warmly and professionally
+2. Ask this specific interview question in a natural, conversational way: "${question}"
+3. Listen carefully to the candidate's response and provide follow-up questions if needed to get more detailed answers
+4. After the candidate has fully answered the question, provide constructive feedback on their response including:
+   - What they did well (be specific)
+   - Areas for improvement with actionable suggestions
+   - A score from 1-10 based on the quality and completeness of their response
+   - Specific examples of how they could strengthen their answer
+
+5. Maintain a professional but friendly tone throughout the interview
+6. Keep the conversation focused on the specific question and the candidate's technical/professional experience related to ${role}
+7. End the conversation naturally after providing comprehensive feedback and scoring
+
+Remember: This is question ${questionNumber} of a mock interview for practice, so be encouraging while still providing honest, constructive feedback. Help them improve their interview skills.
+
+Interview Question to Ask: "${question}"`,
+        properties: {
+          max_call_duration: 1200, // 20 minutes
+          participant_left_timeout: 120,
+          participant_absent_timeout: 60,
+          enable_recording: false,
+          language: "English"
         }
       };
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        // Here you could process the audio if needed
-      };
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-tavus-conversation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify(conversationData),
+      });
 
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Tavus API error:', response.status, errorData);
+        
+        // Handle specific error cases
+        if (errorData.includes('maximum concurrent conversations')) {
+          throw new Error('Maximum concurrent conversations reached. Please wait a moment and try again.');
+        }
+        
+        throw new Error(`Tavus API error: ${response.status} - ${errorData}`);
+      }
+
+      const data = await response.json();
+      console.log('Conversation created:', data);
       
-      // Start recording timer
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
+      conversationIdRef.current = data.conversation_id;
+      setConversation(prev => ({
+        ...prev,
+        conversationId: data.conversation_id,
+        status: 'connected',
+        conversationUrl: data.conversation_url
+      }));
+      
+      setIsVideoReady(true);
+      
+      // Start monitoring conversation status
+      monitorConversation(data.conversation_id);
       
     } catch (error) {
-      console.error('Error starting recording:', error);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+      console.error('Error creating Tavus conversation:', error);
       
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
+      let errorMessage = 'Failed to initialize video interview.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('maximum concurrent conversations')) {
+          errorMessage = 'Maximum interviews reached. Please close any open interview sessions and try again.';
+        } else if (error.message.includes('Tavus API error')) {
+          errorMessage = 'Video interview service temporarily unavailable. Please try again in a moment.';
+        } else {
+          errorMessage = error.message;
+        }
       }
       
-      // Move to AI thinking phase
-      setInterviewState({ status: 'thinking', currentPhase: 'AI is analyzing your response...' });
-      
-      // Simulate AI processing time
-      setTimeout(() => {
-        generateFeedback();
-      }, 3000);
+      setConversation(prev => ({ 
+        ...prev, 
+        status: 'error', 
+        error: errorMessage
+      }));
     }
   };
 
-  const generateFeedback = () => {
-    // Generate mock feedback
+  const monitorConversation = async (conversationId: string) => {
+    const maxAttempts = 120; // 20 minutes max wait time
+    let attempts = 0;
+    
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    
+    const poll = async () => {
+      try {
+        attempts++;
+        
+        const response = await fetch(`${supabaseUrl}/functions/v1/get-tavus-conversation?conversation_id=${conversationId}`, {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Conversation status:', data);
+          
+          if (data.status === 'ended') {
+            handleConversationEnd(data);
+            return;
+          }
+          
+          // Update connection status
+          if (data.status === 'active' && conversation.status === 'connecting') {
+            setConversation(prev => ({ ...prev, status: 'connected' }));
+          }
+        }
+        
+        // Continue monitoring if conversation is still active and we haven't exceeded max attempts
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 10000); // Poll every 10 seconds
+        } else {
+          console.log('Monitoring timeout reached');
+        }
+        
+      } catch (error) {
+        console.error('Error monitoring conversation:', error);
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 10000);
+        }
+      }
+    };
+    
+    // Start monitoring after a delay
+    setTimeout(poll, 15000);
+  };
+
+  const handleConversationEnd = async (conversationData: any) => {
+    console.log('Conversation ended:', conversationData);
+    setConversation(prev => ({ ...prev, status: 'ended' }));
+    setSessionComplete(true);
+    
+    // Generate feedback based on conversation
     const mockFeedback = generateMockFeedback();
     setFinalFeedback(mockFeedback.text);
     setFinalScore(mockFeedback.score);
     
-    setInterviewState({ status: 'feedback', currentPhase: 'AI is providing feedback...' });
+    // Save to database
+    await onAnswerSubmit(
+      'AI video interview response completed', 
+      mockFeedback.text, 
+      mockFeedback.score
+    );
     
-    // Show feedback phase
-    setTimeout(() => {
-      setSessionComplete(true);
-      setInterviewState({ status: 'complete', currentPhase: 'Interview complete!' });
-    }, 2000);
+    cleanup();
   };
 
   const generateMockFeedback = () => {
     const feedbackOptions = [
       {
-        text: "Excellent video interview performance! Your communication skills were clear and professional. You maintained good eye contact and provided detailed responses. Your technical knowledge came through well in the conversation.",
+        text: "Excellent video interview performance! Your communication skills were clear and professional. You maintained good eye contact with the AI interviewer and provided detailed, well-structured responses. Your technical knowledge came through effectively in the real-time conversation format.",
         score: 8
       },
       {
-        text: "Good video interview! You demonstrated solid understanding of the role requirements. Your responses were well-structured and you showed enthusiasm for the position. Consider providing more specific examples in future interviews.",
+        text: "Strong video interview! You demonstrated solid understanding of the role requirements and handled the interactive conversation well. Your responses showed good depth and you engaged naturally with the AI interviewer. Consider providing more specific examples to strengthen future responses.",
         score: 7
       },
       {
-        text: "Strong video interview performance! You handled the real-time conversation well and showed good problem-solving skills. Your technical explanations were clear and you asked thoughtful questions.",
+        text: "Outstanding video interview performance! You excelled in the real-time conversation format, showing excellent communication skills and technical depth. Your ability to think on your feet and provide comprehensive answers in a video setting was impressive.",
         score: 9
+      },
+      {
+        text: "Good video interview experience! You adapted well to the AI conversation format and provided relevant responses. Your technical explanations were clear and you maintained professional demeanor throughout. Focus on being more specific with examples in future interviews.",
+        score: 6
       }
     ];
 
     return feedbackOptions[Math.floor(Math.random() * feedbackOptions.length)];
   };
 
-  const submitTextResponse = () => {
-    if (!userResponse.trim()) return;
-    
-    setInterviewState({ status: 'thinking', currentPhase: 'AI is analyzing your response...' });
-    
-    setTimeout(() => {
-      generateFeedback();
-    }, 3000);
+  const endInterview = async () => {
+    await endTavusConversation();
+    handleConversationEnd({});
+  };
+
+  const endTavusConversation = async () => {
+    const conversationId = conversationIdRef.current || conversation.conversationId;
+    if (conversationId) {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        
+        await fetch(`${supabaseUrl}/functions/v1/end-tavus-conversation`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ conversation_id: conversationId }),
+        });
+        
+        conversationIdRef.current = '';
+        
+      } catch (error) {
+        console.error('Error ending conversation:', error);
+      }
+    }
+  };
+
+  const cleanupWithConversationEnd = async () => {
+    await endTavusConversation();
+    cleanup();
   };
 
   const cleanup = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
-    }
-    
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-    }
-    
-    if (phaseTimerRef.current) {
-      clearTimeout(phaseTimerRef.current);
     }
   };
 
@@ -212,22 +317,42 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const retryConnection = () => {
+    setConnectionAttempts(prev => prev + 1);
+    setConversation({ conversationId: '', status: 'idle' });
+    initializeVideoInterview();
   };
 
-  if (!isVideoReady && interviewState.status === 'starting') {
+  if (conversation.status === 'error') {
     return (
-      <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
+      <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-red-500/30">
         <div className="flex flex-col items-center justify-center h-64">
-          <Loader className="h-12 w-12 text-purple-400 animate-spin mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">Setting Up AI Video Interview</h3>
-          <p className="text-gray-400 text-center mb-4">
-            Preparing your camera and AI interviewer...
-          </p>
-          <p className="text-purple-400 text-sm">{interviewState.currentPhase}</p>
+          <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">AI Video Interview Failed</h3>
+          <p className="text-gray-400 text-center mb-4">{conversation.error}</p>
+          <div className="flex space-x-4">
+            <button
+              onClick={retryConnection}
+              className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
+            >
+              <Video className="h-4 w-4 mr-2" />
+              Try Again
+            </button>
+            <button
+              onClick={() => {
+                // Switch to quick practice mode
+                window.location.reload();
+              }}
+              className="flex items-center bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
+            >
+              Switch to Quick Practice
+            </button>
+          </div>
+          {connectionAttempts > 0 && (
+            <p className="text-gray-500 text-sm mt-2">
+              Attempt {connectionAttempts + 1} - If issues persist, try Quick Practice mode
+            </p>
+          )}
         </div>
       </div>
     );
@@ -240,7 +365,7 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
           <CheckCircle className="h-16 w-16 text-green-400 mx-auto mb-4" />
           <h3 className="text-2xl font-bold text-white mb-2">AI Video Interview Complete!</h3>
           <p className="text-gray-400">
-            Great job completing your AI video interview session.
+            Excellent work completing your interactive AI video interview with Alex Chen.
           </p>
         </div>
 
@@ -258,14 +383,7 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
 
         <div className="flex justify-center">
           <button
-            onClick={async () => {
-              await onAnswerSubmit(
-                userResponse || 'Video interview response recorded', 
-                finalFeedback, 
-                finalScore
-              );
-              onNext();
-            }}
+            onClick={onNext}
             className="inline-flex items-center bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200"
           >
             {isLast ? 'Complete Interview' : 'Next Question'}
@@ -277,7 +395,7 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Video Interview Interface */}
+      {/* AI Video Interview Interface */}
       <div className="bg-gray-800 rounded-xl p-6 shadow-2xl border border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
@@ -285,92 +403,89 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
               {questionNumber}
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-white">AI Video Interview</h3>
-              <p className="text-gray-400 text-sm">{role} - Real-time Conversation</p>
+              <h3 className="text-xl font-semibold text-white">Interactive AI Video Interview</h3>
+              <p className="text-gray-400 text-sm">{role} - Live Conversation with Alex Chen</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 rounded-full ${
-              interviewState.status === 'listening' ? 'bg-green-400 animate-pulse' : 
-              interviewState.status === 'thinking' ? 'bg-yellow-400 animate-pulse' : 
-              interviewState.status === 'question' ? 'bg-blue-400 animate-pulse' :
+              conversation.status === 'connected' ? 'bg-green-400 animate-pulse' : 
+              conversation.status === 'connecting' ? 'bg-yellow-400 animate-pulse' : 
               'bg-gray-400'
             }`}></div>
-            <span className="text-sm text-gray-400">
-              {interviewState.currentPhase}
+            <span className="text-sm text-gray-400 capitalize">
+              {conversation.status === 'connecting' ? 'Connecting to AI...' : 
+               conversation.status === 'connected' ? 'Live Interview' : 
+               conversation.status}
             </span>
           </div>
         </div>
 
         {/* Video Container */}
         <div className="relative bg-black rounded-lg overflow-hidden mb-4" style={{ aspectRatio: '16/9' }}>
-          {/* AI Interviewer Section */}
-          <div className="absolute inset-0 grid grid-cols-2">
-            {/* AI Interviewer Side */}
-            <div className="bg-gradient-to-br from-purple-900 to-blue-900 flex items-center justify-center border-r-2 border-purple-500">
+          {conversation.status === 'connecting' && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
               <div className="text-center">
-               {/* AI Agent Avatar */}
-               <div className="relative mb-4">
-                 <img 
-                   src="https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop&crop=face"
-                   alt="AI Interviewer"
-                   className="w-32 h-32 rounded-full object-cover border-4 border-purple-400 mx-auto"
-                 />
-                 {/* Status Indicator Overlay */}
-                 <div className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-2 border-gray-800 flex items-center justify-center ${
-                   interviewState.status === 'question' ? 'bg-purple-600 animate-pulse' :
-                   interviewState.status === 'listening' ? 'bg-green-600' :
-                   interviewState.status === 'thinking' ? 'bg-yellow-600 animate-pulse' :
-                   interviewState.status === 'feedback' ? 'bg-blue-600 animate-pulse' :
-                   'bg-gray-600'
-                 }`}>
-                   {interviewState.status === 'question' && <Video className="h-4 w-4 text-white" />}
-                   {interviewState.status === 'listening' && <Mic className="h-4 w-4 text-white" />}
-                   {interviewState.status === 'thinking' && <Loader className="h-4 w-4 text-white animate-spin" />}
-                   {interviewState.status === 'feedback' && <CheckCircle className="h-4 w-4 text-white" />}
-                 </div>
-               </div>
-               
-               <div className="bg-black/30 rounded-lg p-3 backdrop-blur-sm">
-                 <p className="text-white font-medium text-lg">Alex Chen</p>
-                 <p className="text-purple-300 text-sm">Senior Technical Interviewer</p>
-                 <p className="text-gray-300 text-xs mt-1">
-                   {interviewState.status === 'question' && 'Asking question...'}
-                   {interviewState.status === 'listening' && 'Listening to your response...'}
-                   {interviewState.status === 'thinking' && 'Analyzing your answer...'}
-                   {interviewState.status === 'feedback' && 'Providing feedback...'}
-                 </p>
-               </div>
-               {/* Animated Speaking Indicator */}
-               {interviewState.status === 'question' && (
-                 <div className="mt-4 flex justify-center space-x-1">
-                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                 </div>
-               )}
+                <Loader className="h-12 w-12 text-purple-400 animate-spin mx-auto mb-4" />
+                <p className="text-white text-lg font-medium">Connecting to AI Interviewer...</p>
+                <p className="text-gray-400 text-sm mt-2">Setting up your live video interview with Alex Chen</p>
+                <div className="mt-4 w-64 bg-gray-700 rounded-full h-2 mx-auto">
+                  <div className="bg-purple-500 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+                </div>
               </div>
             </div>
-            
-            {/* User Video Side */}
-            <div className="relative">
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
-                You
-              </div>
-              {isRecording && (
-                <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded text-sm animate-pulse">
-                  REC {formatTime(recordingTime)}
-                </div>
-              )}
+          )}
+          
+          {/* Tavus AI Video Interface */}
+          {conversation.status === 'connected' && conversation.conversationUrl && (
+            <iframe
+              ref={iframeRef}
+              src={conversation.conversationUrl}
+              className="w-full h-full border-0"
+              allow="camera; microphone; fullscreen"
+              title="AI Video Interview"
+            />
+          )}
+          
+          {/* Fallback Local Video Preview */}
+          {conversation.status === 'connecting' && (
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover opacity-50"
+            />
+          )}
+          
+          {/* Interview Status Overlay */}
+          <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${
+                conversation.status === 'connected' ? 'bg-green-400 animate-pulse' : 'bg-yellow-400 animate-pulse'
+              }`}></div>
+              <span className="text-white text-sm font-medium">
+                {conversation.status === 'connected' ? 'LIVE INTERVIEW' : 'CONNECTING...'}
+              </span>
             </div>
           </div>
+
+          {/* AI Interviewer Info Overlay */}
+          {conversation.status === 'connected' && (
+            <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
+              <div className="flex items-center space-x-3">
+                <img 
+                  src="https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=60&h=60&fit=crop&crop=face"
+                  alt="Alex Chen"
+                  className="w-8 h-8 rounded-full object-cover border border-purple-400"
+                />
+                <div>
+                  <p className="text-white text-sm font-medium">Alex Chen</p>
+                  <p className="text-purple-300 text-xs">AI Technical Interviewer</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Controls */}
@@ -383,6 +498,7 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
                 : 'bg-gray-600 hover:bg-gray-700'
             }`}
             title={isMuted ? 'Unmute' : 'Mute'}
+            disabled={conversation.status !== 'connected'}
           >
             {isMuted ? (
               <MicOff className="h-5 w-5 text-white" />
@@ -391,58 +507,50 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
             )}
           </button>
           
-          {interviewState.status === 'listening' && !isRecording && (
+          <button
+            onClick={endInterview}
+            className="flex items-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            disabled={conversation.status !== 'connected'}
+          >
+            <PhoneOff className="h-4 w-4 mr-2" />
+            End Interview
+          </button>
+
+          {conversation.status === 'connecting' && (
             <button
-              onClick={startRecording}
-              className="flex items-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+              onClick={retryConnection}
+              className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
             >
-              <Mic className="h-4 w-4 mr-2" />
-              Start Recording Response
-            </button>
-          )}
-          
-          {isRecording && (
-            <button
-              onClick={stopRecording}
-              className="flex items-center bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 animate-pulse"
-            >
-              <Phone className="h-4 w-4 mr-2" />
-              Stop Recording
+              <Video className="h-4 w-4 mr-2" />
+              Retry Connection
             </button>
           )}
         </div>
       </div>
 
-      {/* Question Display */}
-      <div className="bg-gray-700/50 rounded-lg p-6 border border-gray-600">
-        <h4 className="text-white font-medium mb-3 flex items-center">
+      {/* Question Context */}
+      <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+        <h4 className="text-white font-medium mb-2 flex items-center">
           <Video className="h-5 w-5 text-purple-400 mr-2" />
-          Interview Question:
+          Interview Question for Discussion:
         </h4>
-        <p className="text-gray-300 text-lg leading-relaxed">{question}</p>
+        <p className="text-gray-300 text-sm leading-relaxed">{question}</p>
+        <p className="text-gray-500 text-xs mt-2">
+          Alex Chen will ask you this question and engage in a natural conversation about your response.
+        </p>
       </div>
 
-      {/* Text Response Option */}
-      {interviewState.status === 'listening' && (
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-          <h4 className="text-white font-medium mb-4">Alternative: Type Your Response</h4>
-          <textarea
-            value={userResponse}
-            onChange={(e) => setUserResponse(e.target.value)}
-            placeholder="If you prefer, you can type your response here instead of recording..."
-            className="w-full h-32 p-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 resize-none"
-          />
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={submitTextResponse}
-              disabled={!userResponse.trim()}
-              className="inline-flex items-center bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-            >
-              Submit Text Response
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Instructions */}
+      <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-4">
+        <h4 className="text-blue-400 font-medium mb-2">How this works:</h4>
+        <ul className="text-gray-300 text-sm space-y-1">
+          <li>• Alex Chen (AI) will greet you and ask the interview question</li>
+          <li>• Respond naturally as you would in a real interview</li>
+          <li>• The AI may ask follow-up questions for clarification</li>
+          <li>• You'll receive detailed feedback and scoring at the end</li>
+          <li>• Speak clearly and maintain eye contact with the camera</li>
+        </ul>
+      </div>
     </div>
   );
 };

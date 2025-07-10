@@ -27,8 +27,11 @@ Deno.serve(async (req: Request) => {
     
     // Use your specific replica ID
     const videoPayload = {
-      ...requestData,
-      replica_id: 'rb17cf590e15'
+      replica_id: 'rb17cf590e15', // Your specific replica ID
+      script: requestData.script,
+      video_name: requestData.video_name,
+      background_url: requestData.background_url,
+      callback_url: requestData.callback_url
     }
 
     const response = await fetch('https://tavusapi.com/v2/videos', {
