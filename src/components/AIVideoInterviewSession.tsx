@@ -82,10 +82,14 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       
       // Use your specific persona ID
-      const personaId = 'pd47b095c82a';
+      // EXPLICITLY DEFINED TAVUS IDS FOR CLARITY
+      const PERSONA_ID = 'pd47b095c82a'; // Your trained AI interviewer Alex Chen
+      const REPLICA_ID = 'rb17cf590e15'; // Your AI avatar (used in video generation)
+      
+      console.log(`Initializing AI interview with Persona ID: ${PERSONA_ID}`);
 
       const conversationData = {
-        persona_id: personaId,
+        persona_id: PERSONA_ID, // Your specific persona ID
         conversation_name: `MockMate ${role} Interview - Q${questionNumber} - ${Date.now()}`,
         conversational_context: `You are Alex Chen, an experienced ${role} interviewer conducting a professional job interview. Your role is to:
 
@@ -125,7 +129,7 @@ Interview Question to Ask: "${question}"`,
 
       if (!response.ok) {
         const errorData = await response.text();
-        console.error('Tavus API error:', response.status, errorData);
+        console.error(`Tavus API error for persona ${PERSONA_ID}:`, response.status, errorData);
         
         // Handle specific error cases
         if (errorData.includes('maximum concurrent conversations')) {
@@ -136,7 +140,7 @@ Interview Question to Ask: "${question}"`,
       }
 
       const data = await response.json();
-      console.log('Conversation created:', data);
+      console.log(`Conversation created successfully with persona ${PERSONA_ID}:`, data);
       
       conversationIdRef.current = data.conversation_id;
       setConversation(prev => ({
