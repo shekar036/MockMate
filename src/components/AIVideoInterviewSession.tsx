@@ -309,45 +309,46 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
             {/* AI Interviewer Side */}
             <div className="bg-gradient-to-br from-purple-900 to-blue-900 flex items-center justify-center border-r-2 border-purple-500">
               <div className="text-center">
-                {interviewState.status === 'question' && (
-                  <div className="animate-pulse">
-                    <div className="w-24 h-24 bg-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <Video className="h-12 w-12 text-white" />
-                    </div>
-                    <p className="text-white font-medium">AI Interviewer</p>
-                    <p className="text-purple-300 text-sm">Speaking...</p>
-                  </div>
-                )}
-                
-                {interviewState.status === 'listening' && (
-                  <div>
-                    <div className="w-24 h-24 bg-green-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <Mic className="h-12 w-12 text-white" />
-                    </div>
-                    <p className="text-white font-medium">AI Interviewer</p>
-                    <p className="text-green-300 text-sm">Listening...</p>
-                  </div>
-                )}
-                
-                {interviewState.status === 'thinking' && (
-                  <div className="animate-pulse">
-                    <div className="w-24 h-24 bg-yellow-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <Loader className="h-12 w-12 text-white animate-spin" />
-                    </div>
-                    <p className="text-white font-medium">AI Interviewer</p>
-                    <p className="text-yellow-300 text-sm">Analyzing...</p>
-                  </div>
-                )}
-                
-                {interviewState.status === 'feedback' && (
-                  <div className="animate-pulse">
-                    <div className="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <CheckCircle className="h-12 w-12 text-white" />
-                    </div>
-                    <p className="text-white font-medium">AI Interviewer</p>
-                    <p className="text-blue-300 text-sm">Providing Feedback...</p>
-                  </div>
-                )}
+               {/* AI Agent Avatar */}
+               <div className="relative mb-4">
+                 <img 
+                   src="https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop&crop=face"
+                   alt="AI Interviewer"
+                   className="w-32 h-32 rounded-full object-cover border-4 border-purple-400 mx-auto"
+                 />
+                 {/* Status Indicator Overlay */}
+                 <div className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-2 border-gray-800 flex items-center justify-center ${
+                   interviewState.status === 'question' ? 'bg-purple-600 animate-pulse' :
+                   interviewState.status === 'listening' ? 'bg-green-600' :
+                   interviewState.status === 'thinking' ? 'bg-yellow-600 animate-pulse' :
+                   interviewState.status === 'feedback' ? 'bg-blue-600 animate-pulse' :
+                   'bg-gray-600'
+                 }`}>
+                   {interviewState.status === 'question' && <Video className="h-4 w-4 text-white" />}
+                   {interviewState.status === 'listening' && <Mic className="h-4 w-4 text-white" />}
+                   {interviewState.status === 'thinking' && <Loader className="h-4 w-4 text-white animate-spin" />}
+                   {interviewState.status === 'feedback' && <CheckCircle className="h-4 w-4 text-white" />}
+                 </div>
+               </div>
+               
+               <div className="bg-black/30 rounded-lg p-3 backdrop-blur-sm">
+                 <p className="text-white font-medium text-lg">Alex Chen</p>
+                 <p className="text-purple-300 text-sm">Senior Technical Interviewer</p>
+                 <p className="text-gray-300 text-xs mt-1">
+                   {interviewState.status === 'question' && 'Asking question...'}
+                   {interviewState.status === 'listening' && 'Listening to your response...'}
+                   {interviewState.status === 'thinking' && 'Analyzing your answer...'}
+                   {interviewState.status === 'feedback' && 'Providing feedback...'}
+                 </p>
+               </div>
+               {/* Animated Speaking Indicator */}
+               {interviewState.status === 'question' && (
+                 <div className="mt-4 flex justify-center space-x-1">
+                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                 </div>
+               )}
               </div>
             </div>
             
