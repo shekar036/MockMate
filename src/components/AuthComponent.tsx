@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { Info, X } from 'lucide-react';
 
 const AuthComponent: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -8,6 +9,7 @@ const AuthComponent: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSkillsInfo, setShowSkillsInfo] = useState(false);
   const { signIn, signUp } = useAuth();
 
   // Extract the background pattern URL to avoid JSX parsing issues
@@ -144,9 +146,16 @@ const AuthComponent: React.FC = () => {
             <p className="text-xs text-gray-500 mt-1">Proven results</p>
           </div>
           <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl text-center border border-white/10">
-            <div className="text-2xl font-bold text-purple-400 mb-1">10K+</div>
-            <p className="text-xs text-gray-300 font-medium">Interviews</p>
-            <p className="text-xs text-gray-500 mt-1">Completed</p>
+            <button
+              onClick={() => setShowSkillsInfo(true)}
+              className="w-full text-center hover:scale-105 transition-transform duration-200"
+            >
+              <div className="flex items-center justify-center mb-2">
+                <Info className="h-6 w-6 text-blue-400" />
+              </div>
+              <p className="text-xs text-gray-300 font-medium">How It Works</p>
+              <p className="text-xs text-gray-500 mt-1">Learn more</p>
+            </button>
           </div>
         </div>
 
@@ -168,6 +177,62 @@ const AuthComponent: React.FC = () => {
         <div className="text-center text-xs text-gray-500">
           <p>Secure • Private • Professional</p>
         </div>
+
+        {/* Skills Info Modal */}
+        {showSkillsInfo && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-gray-800 rounded-2xl p-8 max-w-lg w-full border border-gray-700 shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-white">How MockMate Improves Your Skills</h3>
+                <button
+                  onClick={() => setShowSkillsInfo(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-blue-400 mb-2">AI-Powered Analysis</h4>
+                  <p className="text-gray-300 text-sm">
+                    Our advanced AI evaluates your responses in real-time, providing detailed feedback on technical accuracy, communication clarity, and professional presentation.
+                  </p>
+                </div>
+                
+                <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-green-400 mb-2">Personalized Coaching</h4>
+                  <p className="text-gray-300 text-sm">
+                    Get tailored improvement suggestions based on your specific role, experience level, and performance patterns. Practice weak areas with targeted questions.
+                  </p>
+                </div>
+                
+                <div className="bg-purple-600/10 border border-purple-500/30 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-purple-400 mb-2">Progress Tracking</h4>
+                  <p className="text-gray-300 text-sm">
+                    Monitor your improvement over time with detailed analytics, score trends, and skill development metrics across different technical domains.
+                  </p>
+                </div>
+                
+                <div className="bg-yellow-600/10 border border-yellow-500/30 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-yellow-400 mb-2">Real Interview Simulation</h4>
+                  <p className="text-gray-300 text-sm">
+                    Experience realistic interview scenarios with our AI video interviewer, helping you build confidence and reduce anxiety for actual interviews.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-8 text-center">
+                <button
+                  onClick={() => setShowSkillsInfo(false)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200"
+                >
+                  Start Improving Today
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
