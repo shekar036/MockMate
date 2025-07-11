@@ -35,10 +35,27 @@ const AuthComponent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 flex items-center justify-center p-4">
-      {/* Subtle Background Pattern */}
-      <div className={`absolute inset-0 bg-[url('${backgroundPatternUrl}')] opacity-50`}></div>
+      {/* Background Video */}
+      <div className="absolute inset-0 overflow-hidden">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-20"
+        >
+          <source src="https://videos.pexels.com/video-files/4434067/4434067-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+          <source src="https://videos.pexels.com/video-files/4434067/4434067-hd_1920_1080_25fps.mp4" type="video/mp4" />
+          <source src="https://videos.pexels.com/video-files/4434067/4434067-sd_640_360_25fps.mp4" type="video/mp4" />
+        </video>
+        {/* Video Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-gray-900/70 to-slate-800/80"></div>
+      </div>
 
-      <div className="max-w-md w-full space-y-8 relative z-10">
+      {/* Subtle Background Pattern */}
+      <div className={`absolute inset-0 bg-[url('${backgroundPatternUrl}')] opacity-30 z-10`}></div>
+
+      <div className="max-w-md w-full space-y-8 relative z-20">
         {/* Header */}
         <div className="text-center">
           <div className="mb-8">
