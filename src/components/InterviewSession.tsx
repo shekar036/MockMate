@@ -116,7 +116,7 @@ const InterviewSession: React.FC = () => {
     setShowResumeOptions(false);
   };
 
-  const startNewInterview = () => {
+  const startNewInterview = async () => {
     if (!selectedRole || !sessionMode) return;
     
     try {
