@@ -90,7 +90,12 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
         return;
       }
       
-      setError(errorMessage);
+      // Handle credits exhausted error
+      if (error instanceof Error && error.message.includes('out of conversational credits')) {
+        setError('AI Video generation is temporarily unavailable due to service limits. The interview will continue with text-based questions.');
+      } else {
+        setError(errorMessage);
+      }
       setIsLoading(false);
       setGenerationStatus('');
     }
@@ -244,15 +249,32 @@ const TavusVideoPlayer: React.FC<TavusVideoPlayerProps> = ({
       <div className={`bg-gray-800 rounded-lg p-8 border border-red-500/30 ${className}`}>
         <div className="flex flex-col items-center justify-center h-64">
           <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">Video Generation Failed</h3>
+          <h3 className="text-lg font-semibold text-white mb-2">
+            {error.includes('service limits') ? 'Video Temporarily Unavailable' : 'Video Generation Failed'}
+          </h3>
           <p className="text-gray-400 text-center mb-4">{error}</p>
-          <button
-            onClick={() => generateTavusVideo(question)}
-            className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-          >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Retry Generation
-          </button>
+          {!error.includes('service limits') && (
+            <button
+              onClick={() => generateTavusVideo(question)}
+              className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Retry Generation
+            </button>
+          )}
+          {error.includes('service limits') && (
+            <div className="text-center">
+              <p className="text-blue-400 text-sm mb-3">
+                💡 The interview will continue with text-based questions
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+              >
+                Continue Interview
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

@@ -339,23 +339,36 @@ Interview Question to Ask: "${question}"`,
           <h3 className="text-lg font-semibold text-white mb-2">AI Video Interview Failed</h3>
           <p className="text-gray-400 text-center mb-4">{conversation.error}</p>
           <div className="flex space-x-4">
-            <button
-              onClick={retryConnection}
-              className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
-            >
-              <Video className="h-4 w-4 mr-2" />
-              Try Again
-            </button>
+            {!conversation.error?.includes('service limits') && (
+              <button
+                onClick={retryConnection}
+                className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Try Again
+              </button>
+            )}
             <button
               onClick={() => {
-                // Switch to quick practice mode
+                // Navigate to quick practice mode
+                const tabsList = document.querySelector('[role="tablist"]');
+                const interviewTab = tabsList?.querySelector('[data-value="interview"]') as HTMLElement;
+                interviewTab?.click();
+                // Reset to show mode selection
                 window.location.reload();
               }}
               className="flex items-center bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 font-medium"
             >
-              Switch to Quick Practice
+              Use Quick Practice Instead
             </button>
           </div>
+          {conversation.error?.includes('service limits') && (
+            <div className="mt-4 p-4 bg-blue-600/10 border border-blue-500/30 rounded-lg">
+              <p className="text-blue-400 text-sm text-center">
+                💡 <strong>Tip:</strong> Quick Practice mode offers the same great interview questions with text and voice input - perfect for skill development!
+              </p>
+            </div>
+          )}
           {connectionAttempts > 0 && (
             <p className="text-gray-500 text-sm mt-2">
               Attempt {connectionAttempts + 1} - If issues persist, try Quick Practice mode
@@ -548,7 +561,9 @@ Interview Question to Ask: "${question}"`,
         <p className="text-gray-500 text-xs mt-2">
           Alex Chen will ask you this question and engage in a natural conversation about your response.
         </p>
-      </div>
+      if (error.message.includes('out of conversational credits')) {
+        errorMessage = 'AI Video Interview is temporarily unavailable due to service limits. Please try Quick Practice mode instead, or contact support to restore video interview functionality.';
+      } else if (error.message.includes('maximum concurrent conversations')) {
 
       {/* Instructions */}
       <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-4">
