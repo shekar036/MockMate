@@ -5,6 +5,8 @@ interface AIVideoInterviewSessionProps {
   question: string;
   questionNumber: number;
   role: string;
+  category: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   onAnswerSubmit: (answer: string, feedback: string, score: number) => void;
   onNext: () => void;
   isLast: boolean;
@@ -21,6 +23,8 @@ const AIVideoInterviewSession: React.FC<AIVideoInterviewSessionProps> = ({
   question,
   questionNumber,
   role,
+  category,
+  difficulty,
   onAnswerSubmit,
   onNext,
   isLast
@@ -408,7 +412,9 @@ Interview Question to Ask: "${question}"`,
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white">Interactive AI Video Interview</h3>
-              <p className="text-gray-400 text-sm">{role} - Live Conversation with Alex Chen</p>
+              <p className="text-gray-400 text-sm">
+                {role} • {category} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} • Live with Alex Chen
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">

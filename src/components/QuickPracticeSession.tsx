@@ -6,6 +6,8 @@ import FeedbackDisplay from './FeedbackDisplay';
 interface QuickPracticeSessionProps {
   question: string;
   questionNumber: number;
+  category: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   onAnswerSubmit: (answer: string, feedback: string, score: number) => void;
   onNext: () => void;
   isLast: boolean;
@@ -14,6 +16,8 @@ interface QuickPracticeSessionProps {
 const QuickPracticeSession: React.FC<QuickPracticeSessionProps> = ({
   question,
   questionNumber,
+  category,
+  difficulty,
   onAnswerSubmit,
   onNext,
   isLast
@@ -87,7 +91,9 @@ const QuickPracticeSession: React.FC<QuickPracticeSessionProps> = ({
           </div>
           <div>
             <h3 className="text-xl font-semibold text-white">Interview Question</h3>
-            <p className="text-gray-400 text-sm">Quick Practice Mode</p>
+            <p className="text-gray-400 text-sm">
+              Quick Practice Mode • {category} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+            </p>
           </div>
         </div>
         

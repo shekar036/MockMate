@@ -6,37 +6,7 @@ import AIVideoInterviewSession from './AIVideoInterviewSession';
 import ProgressBar from './ProgressBar';
 import { useSupabase } from '../contexts/SupabaseContext';
 import { useAuth } from '../hooks/useAuth';
-
-const INTERVIEW_QUESTIONS = {
-  'Frontend Developer': [
-    'Tell me about your experience with React and modern frontend frameworks.',
-    'How do you handle state management in large React applications?',
-    'Explain the difference between client-side and server-side rendering.',
-    'How do you optimize web application performance?',
-    'Describe your approach to responsive design and CSS architecture.'
-  ],
-  'Backend Developer': [
-    'Explain your experience with API design and RESTful services.',
-    'How do you handle database optimization and scaling?',
-    'Describe your approach to error handling and logging.',
-    'How do you ensure security in backend applications?',
-    'Explain your experience with microservices architecture.'
-  ],
-  'Data Scientist': [
-    'Describe your experience with machine learning algorithms.',
-    'How do you handle data cleaning and preprocessing?',
-    'Explain your approach to model validation and evaluation.',
-    'How do you communicate complex findings to non-technical stakeholders?',
-    'Describe a challenging data science project you\'ve worked on.'
-  ],
-  'DevOps Engineer': [
-    'Explain your experience with containerization and orchestration.',
-    'How do you implement CI/CD pipelines?',
-    'Describe your approach to monitoring and alerting.',
-    'How do you handle infrastructure as code?',
-    'Explain your experience with cloud platforms and services.'
-  ]
-};
+import { questionGenerator, GeneratedQuestion } from '../utils/questionGenerator';
 
 interface InProgressSession {
   sessionId: string;
@@ -53,12 +23,14 @@ const InterviewSession: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [sessionMode, setSessionMode] = useState<'quick' | 'video' | ''>('');
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [questions, setQuestions] = useState<string[]>([]);
+  const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
   const [inProgressSessions, setInProgressSessions] = useState<InProgressSession[]>([]);
   const [showResumeOptions, setShowResumeOptions] = useState(false);
+  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -106,7 +78,7 @@ const InterviewSession: React.FC = () => {
 
       Object.entries(sessionGroups).forEach(([sessionId, data]: [string, any]) => {
         const role = data.role;
-        const totalQuestions = INTERVIEW_QUESTIONS[role as keyof typeof INTERVIEW_QUESTIONS]?.length || 5;
+        const totalQuestions = 5; // Standard interview length
         const answeredQuestions = data.questions.length;
 
         // If session is incomplete (less than total questions)
@@ -132,8 +104,10 @@ const InterviewSession: React.FC = () => {
   };
 
   const resumeSession = (session: InProgressSession) => {
-    const roleQuestions = INTERVIEW_QUESTIONS[session.role as keyof typeof INTERVIEW_QUESTIONS];
-    setQuestions(roleQuestions);
+    // Generate remaining questions for the session
+    const remainingCount = session.totalQuestions - session.currentQuestion;
+    const generatedQuestions = questionGenerator.generateQuestions(session.role, remainingCount, difficulty);
+    setQuestions(generatedQuestions);
     setSelectedRole(session.role);
     setCurrentQuestion(session.currentQuestion);
     setSessionId(session.sessionId);
@@ -146,8 +120,21 @@ const InterviewSession: React.FC = () => {
     if (!selectedRole || !sessionMode) return;
     
     try {
-      const roleQuestions = INTERVIEW_QUESTIONS[selectedRole as keyof typeof INTERVIEW_QUESTIONS];
-      setQuestions(roleQuestions);
+      // Fetch user's previous performance for adaptive questioning
+      const { data: previousAnswers } = await supabase
+        .from('interview_sessions')
+        .select('question, score, role')
+        .eq('user_id', user?.id)
+        .eq('role', selectedRole)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      // Generate adaptive questions based on previous performance
+      const generatedQuestions = previousAnswers && previousAnswers.length > 0
+        ? questionGenerator.generateAdaptiveQuestions(selectedRole, previousAnswers.map(a => ({ question: a.question, score: a.score, category: 'General' })), 5)
+        : questionGenerator.generateQuestions(selectedRole, 5, difficulty, selectedCategories.length > 0 ? selectedCategories : undefined);
+      
+      setQuestions(generatedQuestions);
       setCurrentQuestion(0);
       setIsInterviewActive(true);
       setIsComplete(false);
@@ -192,7 +179,7 @@ const InterviewSession: React.FC = () => {
         .insert({
           user_id: user.id,
           role: selectedRole,
-          question: questions[currentQuestion],
+          question: questions[currentQuestion].question,
           user_answer: answer,
           feedback_text: feedback,
           score: score,
@@ -402,8 +389,99 @@ const InterviewSession: React.FC = () => {
             </div>
           )}
 
+          {/* Interview Customization */}
+          {sessionMode && selectedRole && !isInterviewActive && (
+            <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-white">
+                  Customize Your Interview
+                </h3>
+                <button
+                  onClick={() => setSelectedRole('')}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  ← Back to Role Selection
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Difficulty Selection */}
+                <div>
+                  <label className="block text-white font-medium mb-3">
+                    Difficulty Level
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {questionGenerator.getDifficultyLevels().map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => setDifficulty(level)}
+                        className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                          difficulty === level
+                            ? 'border-blue-500 bg-blue-600/20 text-blue-400'
+                            : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="font-medium capitalize">{level}</div>
+                          <div className="text-xs mt-1 opacity-75">
+                            {level === 'beginner' && 'Fundamental concepts'}
+                            {level === 'intermediate' && 'Practical application'}
+                            {level === 'advanced' && 'Expert-level topics'}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Category Selection */}
+                <div>
+                  <label className="block text-white font-medium mb-3">
+                    Focus Areas (Optional)
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {questionGenerator.getAvailableCategories(selectedRole).map((category) => (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          setSelectedCategories(prev => 
+                            prev.includes(category)
+                              ? prev.filter(c => c !== category)
+                              : [...prev, category]
+                          );
+                        }}
+                        className={`p-3 rounded-lg border-2 transition-all duration-200 text-sm ${
+                          selectedCategories.includes(category)
+                            ? 'border-purple-500 bg-purple-600/20 text-purple-400'
+                            : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500'
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-gray-400 text-sm mt-2">
+                    Leave empty for a balanced mix of all topics
+                  </p>
+                </div>
+
+                {/* Interview Preview */}
+                <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-4">
+                  <h4 className="text-blue-400 font-medium mb-2">Interview Preview</h4>
+                  <div className="text-gray-300 text-sm space-y-1">
+                    <p>• <strong>Role:</strong> {selectedRole}</p>
+                    <p>• <strong>Mode:</strong> {sessionMode === 'quick' ? 'Quick Practice' : 'AI Video Interview'}</p>
+                    <p>• <strong>Difficulty:</strong> {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</p>
+                    <p>• <strong>Focus Areas:</strong> {selectedCategories.length > 0 ? selectedCategories.join(', ') : 'All topics'}</p>
+                    <p>• <strong>Questions:</strong> 5 dynamically generated questions</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Start Interview Button */}
-          {sessionMode && selectedRole && (
+          {sessionMode && selectedRole && !isInterviewActive && (
             <div className="bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-700">
               <div className="text-center">
                 <div className="mb-6">
@@ -417,7 +495,9 @@ const InterviewSession: React.FC = () => {
                       <div className="text-white font-medium">
                         {sessionMode === 'quick' ? 'Quick Practice' : 'AI Video Interview'}
                       </div>
-                      <div className="text-gray-400 text-sm">{selectedRole}</div>
+                      <div className="text-gray-400 text-sm">
+                        {selectedRole} • {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} Level
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -439,6 +519,8 @@ const InterviewSession: React.FC = () => {
                     onClick={() => {
                       setSelectedRole('');
                       setSessionMode('');
+                      setDifficulty('intermediate');
+                      setSelectedCategories([]);
                     }}
                     className="text-gray-400 hover:text-white transition-colors text-sm"
                   >
@@ -499,17 +581,21 @@ const InterviewSession: React.FC = () => {
 
       {sessionMode === 'quick' ? (
         <QuickPracticeSession
-          question={questions[currentQuestion]}
+          question={questions[currentQuestion].question}
           questionNumber={currentQuestion + 1}
+          category={questions[currentQuestion].category}
+          difficulty={questions[currentQuestion].difficulty}
           onAnswerSubmit={saveAnswer}
           onNext={nextQuestion}
           isLast={currentQuestion === questions.length - 1}
         />
       ) : (
         <AIVideoInterviewSession
-          question={questions[currentQuestion]}
+          question={questions[currentQuestion].question}
           questionNumber={currentQuestion + 1}
           role={selectedRole}
+          category={questions[currentQuestion].category}
+          difficulty={questions[currentQuestion].difficulty}
           onAnswerSubmit={saveAnswer}
           onNext={nextQuestion}
           isLast={currentQuestion === questions.length - 1}
