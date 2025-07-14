@@ -1,51 +1,51 @@
-# 🎤 MockMate - AI-Powered Mock Interview Assistant
+# MockMate - AI-Powered Mock Interview Assistant
 
 MockMate is a comprehensive web application that helps job seekers prepare for technical interviews through AI-powered mock interviews. The platform provides personalized feedback, scoring, and maintains a complete history of interview sessions.
 
 ![MockMate Demo](https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=1200&h=400&fit=crop)
 
-## 🌟 Features
+## Features
 
-### 🔐 User Authentication
+### User Authentication
 - Secure email/password authentication via Supabase Auth
 - User session management with automatic token refresh
 - Protected routes and data access
 
-### 🎯 Role-Based Interviews
+###  Role-Based Interviews
 - **Frontend Developer**: React, Vue, Angular, JavaScript, CSS
 - **Backend Developer**: Node.js, Python, APIs, Databases
 - **Data Scientist**: Machine Learning, Python, Statistics, Analytics
 - **DevOps Engineer**: AWS, Docker, Kubernetes, CI/CD
 
-### 🎤 Interactive Interview Experience
+###  Interactive Interview Experience
 - **Audio Recording**: Built-in voice recorder with real-time feedback
 - **Text Input**: Type responses directly in the interface
 - **Progress Tracking**: Visual progress bar showing interview completion
 - **Question Flow**: 5 carefully curated questions per role
 
-### 🤖 AI-Powered Feedback
+###  AI-Powered Feedback
 - **Intelligent Scoring**: 1-10 scale based on response quality
 - **Detailed Text Feedback**: Constructive criticism and improvement suggestions
 - **Audio Feedback**: Text-to-speech synthesis for accessibility
 - **Performance Analytics**: Track improvement over time
 
-### 📊 Session Management
+###  Session Management
 - **Complete History**: View all past interview sessions
 - **Performance Metrics**: Average scores and progress tracking
 - **Detailed Reviews**: Question-by-question breakdown with feedback
 - **Session Grouping**: Organized by role and date
 
-### 🎨 Modern UI/UX
+###  Modern UI/UX
 - **Dark Theme**: Professional, eye-friendly interface
 - **Responsive Design**: Works seamlessly on desktop and mobile
 - **Smooth Animations**: Polished micro-interactions
 - **Accessibility**: ARIA labels and keyboard navigation support
 
-## 🚀 Live Demo
+##  Live Demo
 
 Visit the live application: [https://gregarious-empanada-ac87e7.netlify.app](https://gregarious-empanada-ac87e7.netlify.app)
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - **React 18** - Modern React with hooks and functional components
@@ -69,7 +69,7 @@ Visit the live application: [https://gregarious-empanada-ac87e7.netlify.app](htt
 - **Netlify** - Static site hosting with CI/CD
 - **Environment Variables** - Secure configuration management
 
-## 📋 Prerequisites
+##  Prerequisites
 
 Before running this project, make sure you have:
 
@@ -78,7 +78,7 @@ Before running this project, make sure you have:
 - **Supabase Account** (free tier available)
 - **Git** for version control
 
-## ⚡ Quick Start
+##  Quick Start
 
 ### 1. Clone the Repository
 
@@ -119,7 +119,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 mockmate/
@@ -155,7 +155,7 @@ mockmate/
 └── vite.config.ts       # Vite configuration
 ```
 
-## 🗄️ Database Schema
+##  Database Schema
 
 ### `interview_sessions` Table
 
@@ -179,7 +179,7 @@ mockmate/
 - Secure authentication with Supabase Auth
 - Input validation and sanitization
 
-## 🎯 Usage Guide
+##  Usage Guide
 
 ### Starting an Interview
 
@@ -204,7 +204,7 @@ mockmate/
 - **Audio Feedback**: Listen to AI-generated feedback
 - **Browser Compatibility**: Works in modern browsers with microphone access
 
-## 🔧 Development
+##  Development
 
 ### Available Scripts
 
@@ -236,7 +236,7 @@ npm run lint
 3. **Hooks**: Add custom hooks in `src/hooks/`
 4. **Database**: Create new migrations in `supabase/migrations/`
 
-## 🚀 Deployment
+##  Deployment
 
 ### Netlify Deployment
 
@@ -263,7 +263,7 @@ npm run build
 dist
 ```
 
-## 🤝 Contributing
+##  Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -282,11 +282,11 @@ We welcome contributions! Please follow these steps:
 - Ensure **responsive design**
 - Test on **multiple browsers**
 
-## 📝 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - **Supabase** for the excellent backend platform
 - **Tailwind CSS** for the utility-first CSS framework
@@ -294,7 +294,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Vite** for the fast development experience
 - **Netlify** for seamless deployment
 
-## 📞 Support
+##  Support
 
 If you encounter any issues or have questions:
 
@@ -302,7 +302,7 @@ If you encounter any issues or have questions:
 2. **Create** a new issue with detailed information
 3. **Contact** the development team
 
-## 🔮 Future Enhancements
+##  Future Enhancements
 
 - **AI Integration**: OpenAI GPT for more sophisticated feedback
 - **Video Interviews**: Support for video recording and analysis
@@ -311,4 +311,5 @@ If you encounter any issues or have questions:
 - **Analytics Dashboard**: Advanced performance analytics
 - **Mobile App**: Native iOS and Android applications
 - **Integration**: Connect with job boards and ATS systems
+
 
