@@ -48,18 +48,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [supabase.auth]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: email.trim(), 
+        password 
+      });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        throw new Error(error.message || 'Failed to sign in');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase.auth.signUp({ 
+        email: email.trim(), 
+        password,
+        options: {
+          emailRedirectTo: undefined // Disable email confirmation for development
+        }
+      });
+      
+      if (error) {
+        console.error('Sign up error:', error);
+        throw new Error(error.message || 'Failed to sign up');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+        throw new Error(error.message || 'Failed to sign out');
+      }
+    } catch (error) {
+      console.error('Sign out error:', error);
+      throw error;
+    }
   };
 
   return (
